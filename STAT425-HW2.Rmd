@@ -1,0 +1,151 @@
+---
+title: "STAT425_HW2"
+author: "Aidana Karipbayeva"
+date: "9/24/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+### Q1. a.
+```{r}
+library(faraway)
+data(teengamb)
+model1 <- lm(gamble ~ sex + status + income + verbal, data = teengamb)
+summary(model1)
+
+```
+As we can see from the summary, $R^2$ is 0.5267. So, 52.67% of variation in the response is explained by the predictors.
+
+### Q1. b.
+```{r}
+which.max(model1$residuals)
+which.min(model1$residuals)
+mean(model1$residuals)
+median(model1$residuals)
+```
+24 corresponds to the highest positive residual, and 39 corresponds to the lowest negative residual.\
+The mean of residuals is equal to `r mean(model1$residuals)`.\
+The median of residuals is equal to `r median(model1$residuals)`.\
+
+
+### Q1. c.
+
+Coefficient for sex is -22.11833. 0 stands for male and 1 stands for female. So, when all other predictors are held constant, the difference in the predicted expenditure on gambling for a male compared to a female will be -22.11833.
+
+
+### Q1. d.
+```{r}
+tcrit <- qt(0.975, nrow(teengamb)-5)
+x0 <- c(1, 0, mean(teengamb$status),mean(teengamb$income),mean(teengamb$verbal))
+y0 <- sum(x0*coef(model1))
+X <- model.matrix(model1)
+std.hat <- summary(model1)$sigma
+
+PI_y <- y0 + c(-1,1)*tcrit*std.hat * sqrt(1 + t(x0) %*% solve(t(X)%*%X) %*% x0)
+PI_y
+
+```
+So, the 95% Prediction Interval for a male with average status, income and verbal is between 18. 78277 and 37.70227
+
+### Q1. e.
+```{r}
+x02 <- data.frame(sex = 1, status = mean(teengamb$status), income = teengamb$income, verbal = mean(teengamb$verbal))
+PI2 <- predict(model1, x02, interval = "prediction", level = .95)
+head(PI2)
+matplot(teengamb$income, PI2, lty = c(1,2,2), lwd = c(2,2,2), type = "l", main = "Prediction Bands", xlab = "Income", ylab = "Gambling")
+```
+
+### Q1. f. 
+```{r}
+summary(model1)
+```
+As we can see from the summary statistics table, only income and sex variables are significant with 0.05 significance level.
+
+```{r}
+model2 <- lm(teengamb$gamble ~ sex + income, data = teengamb)
+summary(model2)$r.squared
+```
+So, 50.13882% of variation in the response is explained by this new model. 
+
+```{r}
+X <- model.matrix(model1)
+y <- teengamb$gamble
+B_big = solve(t(X)%*%X) %*% t(X) %*% y
+y_head <- X%*%B_big
+rss_big <- crossprod(y - y_head)
+
+X2 <- model.matrix(model2)
+B_small = solve(t(X2)%*%X2) %*% t(X2) %*% y
+y_head2 <- X2%*%B_small
+rss_small <- crossprod(y - y_head2)
+
+F_dif = ((rss_small - rss_big)/(5-3))/(rss_big/(nrow(teengamb)-5))
+F_dif
+F_qf = qf(.95, df1=2, df2=42) 
+F_qf
+```
+
+```{r}
+model2 <- lm(gamble ~ sex + income + status, data = teengamb)
+anova(model1, model2)
+```
+
+So, here we can see that the we fail to reject the null hypothesis that a smaller model is sufficient, because the F value (3.219942) is greater than F statistics(1.1242). 
+
+
+### Q1. g.
+```{r}
+model_sex <- lm(gamble ~ sex, data = teengamb)
+summary(model_sex)$r.squared
+model_income <- lm(gamble ~ income, data = teengamb)
+summary(model_income)$r.squared
+model_status <- lm(gamble ~ status, data = teengamb)
+summary(model_status)$r.squared
+model_verbal <- lm(gamble ~ verbal, data = teengamb)
+summary(model_verbal)$r.squared
+```
+$R^2$ for model with sex variable is `r summary(model_sex)$r.squared`\
+$R^2$ for model with income variable is  `r summary(model_income)$r.squared`.\
+$R^2$ for model with status variable is `r summary(model_status)$r.squared`.\
+$R^2$ for model with verbal variable is `r summary(model_verbal)$r.squared`.\
+
+So, as we can see the linear regression model with income variable gives the highest $R^2$.
+```{r}
+X3 <- model.matrix(model_income)
+B_income = solve(t(X3)%*%X3) %*% t(X3) %*% y
+y_head3 <- X3%*%B_income
+rss_income <- crossprod(y - y_head3)
+
+F_dif1 = ((rss_income - rss_big)/(5-2))/(rss_big/(nrow(teengamb)-5))
+F_dif1
+F_qf1 = qf(.95, df1=3, df2=42) 
+F_qf1
+
+anova(model1, model_income)
+```
+So, here we can see that the we reject the null hypothesis( a model with only income variable is sufficient), because the F value with 3 and 42 degrees of freedom is less than F statistics. 
+
+### Q1. h.
+```{r}
+model_income_sex = lm(teengamb$gamble ~ income + sex, data = teengamb)
+summary(model_income_sex)$r.squared
+model_income_sex_status = lm(teengamb$gamble ~ income + sex + status, data = teengamb)
+summary(model_income_sex_status)$r.squared
+```
+$R^2$ for model with only income variable is  0.387.\
+$R^2$ for model with income and sex variables is 0.5014.\
+$R^2$ for model with income, sex and status variables is 0.5058.\
+$R^2$ for full model is 0.5267.\
+
+```{r}
+R_sqs <- c(0.387, 0.5014, 0.5058, 0.5267)
+n_pred <- c(1, 2, 3, 4)
+plot(n_pred, R_sqs)
+```
+
+As it can be seen from the plot, when we are adding the second variable to the model, which is sex in this case, $R^2$ increases substantially. After that adding the variables to the model does not change $R^2$ much.

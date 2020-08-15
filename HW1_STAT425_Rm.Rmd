@@ -1,0 +1,203 @@
+---
+title: "homework1_STAT425"
+author: "Aidana Karipbayeva"
+date: "9/15/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Reading a cship file
+```{r}
+ship <- read.table("cship.dat")
+```
+
+## Question 1
+
+### Q1. a.
+Computing summary statistics of the number of passengers and crew members.
+
+```{r}
+summary(ship$passengers)
+summary(ship$crew)
+```
+
+It shows the minimum value, 1st quantile, Median, Mean, 3rd quantile and the maximum value for each of the variables. This statistics can be helpful when we are only starting with the data and give us a glimpse about the data
+
+
+
+### Q1. b.
+Plotting the relationship between the number of passengers (x-axis) and the number of crew members (y-axis)
+```{r}
+plot(ship$passengers, ship$crew, type="p", 
+     xlab="number of people in a crew", ylab="number of passengers")
+```
+
+As can be seen from the plot we can see a positive linear relationship between the number of passengers and the number of people in a crew, because the number of passengers grows as the number of people in a crew increases. 
+
+
+### Q1. c.
+```{r}
+correlation = cor(ship$passengers, ship$crew)
+```
+
+The correlation coefficient between the number of passengers and the number of people in a crew is equal to `r correlation`
+
+
+### Q1. d.
+Fitting a SLR model of the number of passengers and crew
+```{r}
+model1 <- lm(crew ~ passengers, data = ship)
+summary(model1)
+```
+
+From the table we can see that the $B_0$ equals to 1.67831 and $B_1$ equals to 0.33135. This can be interpreted in a following way: as the number of passengers increases by 1, the number of people in a crew increases by 0.33135, which is not very sensible as we are talking about people. So, it is better to say that as the number of passengers increases by 3, the number of people in a crew increases by 1. Also, p-value is very small which shows that  variable for passengers is significant. $R^2$ is 0.8377, which means that the 83.77% of variation is explained by the model.
+
+## Question 2
+
+### Q2. a-c.
+Calculating sxx, sxy, syy
+```{r}
+x <- ship$passengers
+y <- ship$crew
+
+sxx <- crossprod(x - mean(x))
+sxy <- sum((x - mean(x))*(y - mean(y)))
+syy <- crossprod(y - mean(y))
+```
+
+SXX is `r sxx` \
+SXY is `r sxy` \
+SYY is `r syy` \
+
+
+### Q2. d.
+```{r}
+X <- model.matrix(model1)
+```
+The model matrix has a shape of 158x2. The first colum contains 1's and the second column contains observations for the number of people in a crew.
+
+
+
+### Q2. e.
+```{r}
+B = solve(t(X) %*% X) %*% t(X) %*% y
+B0 = B[1,1]
+B1 = B[2,1]
+```
+LS estimates are `r B0` and `r B1`
+
+### Q2. f. 
+```{r}
+B1_cor = correlation * sqrt(syy/sxx)
+```
+Using correlation $\hat{B_1}$ is `r B1_cor`.
+
+
+
+### Q2. g.
+```{r}
+y_head = B0 + B1*x
+RSS = sum((y - y_head)^2)
+RSS
+n=158
+var = RSS/(n-2)
+var
+```
+
+
+### Q2. h.
+Variance-covariance matrix for $\hat{B}$
+```{r}
+Var_B =  var * solve(t(X) %*% X)
+Var_B
+```
+
+The element in row 2 column 2 represents a variance of $B_1$. The element in row 2, column 1 represents a covariance between $B_0$ and $B_1$.
+
+
+
+### Q2. i.
+```{r}
+y_bar = mean(y)
+R_sq = crossprod(y_head - y_bar)/crossprod(y-y_bar)
+R_sq
+```
+
+$R^2$ of this SLR is equal to `r R_sq`
+
+```{r}
+set.seed(217) 
+```
+
+
+
+## Question 3
+
+### Q3. a.
+Generating 30 values from a random exponential distribution with mean = 5:
+```{r}
+x1 <-rexp(n = 30, rate = 1/5)
+```
+
+
+### Q3. b.
+Generating 30 values from a random normal distribution with mean = 5, and sd = 3:
+```{r}
+x2 <- rnorm(n = 30, mean = 5, sd = 3)
+```
+
+
+### Q3. c.
+Creating a function:
+```{r}
+y_func = function(x1, x2) {
+  epsilon <- rnorm(n=30, mean = 0, sd = 2)
+  y <- 2*x1 - 6*x2 + epsilon
+  return(y)
+}
+y <- y_func(x1, x2)
+head(y)
+```
+
+
+
+### Q3. d.
+```{r}
+model2 <- lm(y ~ x1 + x2)
+```
+
+
+### Q3. e.
+```{r}
+X <- model.matrix(model2)
+B_head = solve(t(X)%*%X) %*% t(X) %*% y
+y_head = X %*% B_head
+epsilon_head = (y - y_head)
+zero = t(X) %*% epsilon_head 
+zero
+```
+
+So, as we can see, the multiplication of model matrix and epsilon gives us a zero vector, which proves that X and epsilon are orthogonal to each other.
+
+
+### Q3. f.
+```{r}
+summary(model2)
+```
+
+At alpha = 0.05, both, x1 and x2, are significant because their p-value is less than 0.05. The reason why they are significant is that y is a function of x1 and x2.
+
+### Q3. g.
+```{r}
+H = X %*% solve(t(X)%*%X) %*% t(X)
+head(H)
+```
+
+$\hat{Y}$ = HY \
+Hat matrix is a projection matrix which maps Y to $\hat{Y}$, as can be shown in the above formula. 
+
+    
+

@@ -1,0 +1,173 @@
+---
+title: "STAT425-HW3"
+author: "Aidana Karipbayeva"
+date: "10/13/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+```{r}
+library(faraway)
+data(teengamb)
+model1 <- lm(gamble ~ ., data = teengamb)
+summary(model1)
+
+```
+
+### Q1. a.
+```{r}
+par(mar=c(1,1,1,1))
+plot(fitted(model1), resid(model1))
+
+```
+From the above plot, we can see that the constant variance assumption for the errors is violated, as the points form a megaphone shape which can suggest us to modify the chosen model.
+
+### Q1. b.
+```{r}
+qqnorm(resid(model1))
+qqline(resid(model1))
+```
+It seems like the errors are normally distributed as most of the points lie on the line.
+
+
+### Q1. c.
+```{r}
+plot(hatvalues(model1))
+which(hatvalues(model1) >= 10/47)
+```
+From the above plot, we can see that there are 4 points with high leverage. Testing points with leverage greater than 2p/n confirms that 4 observation points (31 33 35 42) have high leverage
+
+
+### Q1. d.
+
+```{r}
+plot(rstudent(model1))
+
+```
+From the rstudentized plot, we can see that there is one outlier as its residual is much larger than other observations' residuals.
+
+### Q1. e.
+```{r}
+plot(cooks.distance(model1))
+```
+From the plot, we can see that there is no observation with Cook's distance bigger than 1. Thus, we can conclude that there are no influential points.
+
+## Question 2
+
+### Q2. a.1
+```{r}
+set.seed(1)
+x <- rnorm(n = 100)
+
+```
+
+### Q2. b.
+```{r}
+plot(sort(x), sort(x), xlab = "Theoretical Quantiles", ylab = "Simple Quantiles", main= "My Q-Q Plot")
+
+```
+
+## Question 3
+```{r}
+parent <- 15:21
+offspring <- c(15.89, 16.16, 16.12, 16.39, 16.36, 17.06, 17.25)
+sd = c(1.764, 1.595, 1.655, 2.036, 1.895, 1.937, 1.987)
+Gru <- data.frame(parent, offspring, sd)
+```
+
+### Q3. a.
+```{r}
+X=parent
+Y=offspring
+plot(X, Y)
+```
+### Q3. b.
+```{r}
+ols <- lm(Y~X)
+summary(ols)
+```
+### Q3. c.
+```{r}
+wls <- lm(Y ~ X, weights=sd^-2)
+summary(wls)
+```
+
+### Q3. d.
+```{r}
+plot(X, Y, col = "blue",main = "Fitted lines from OLS and WLS", xlab = "Parent", ylab = "Offspring")
+abline(ols, col = "red")
+abline(wls, col = "green")
+```
+### Q3. e.
+```{r}
+t_test <- (wls$coefficients[2]-0.5)/coef(summary(wls))[, "Std. Error"][2]
+p_value <- pt(q = t_test, df = 5)
+```
+Test statistic is equal to `r t_test`, its distibution under H0 follows t-distribution and p-value is equal to `r p_value`. It is less than 0.05(my chosen alpha), so we will reject the null hypothesis.
+
+
+## Question 4
+```{r}
+library(faraway)
+data(strongx)
+```
+### Q4. a. 
+```{r}
+str_model = lm(crossx ~ energy, data = strongx)
+corr = cor(str_model$res[-1], str_model$res[-10])
+S = diag(10)
+Sig.mat <- round(corr ^ abs(row(S) - col(S)),2)
+Sig.mat
+Sig.inv <- round(solve(Sig.mat),2)
+Sig.inv
+
+```
+
+### Q4. b.
+```{r}
+X = model.matrix(str_model)
+beta_hat<-solve(t(X)%*%Sig.inv%*%X)%*%t(X)%*%Sig.inv%*%strongx$crossx
+beta_hat
+
+```
+
+## Question 5
+```{r}
+golf <- read.table('lpga2009.csv', header = TRUE, sep = ",")
+```
+
+## Q5. a.
+```{r}
+model3 <- lm(prize ~ percentile, data = golf)
+summary(model3)
+quartz.save();par(mfrow=c(2,2));plot(model3)
+```
+
+## Q5. b.
+It seems like residuals are normally distributed from Q-Q plot, as points lie on the line.
+
+
+## Q5. c.
+```{r}
+outliers <- which(rstandard(model3) > 2.5)
+plot(rstudent(model3))
+outliers
+
+```
+From the plot, we can see that there is one big outlier and a few smaller outliers. The observation numbers of these outliers are `r outliers`
+
+
+## Q5. d.
+From the Residuals vs Leverage plot, we can see that there are no influential points.
+
+
+## Q5. e.
+```{r}
+library(lmtest)
+bptest(model3)
+```
+We reject the null hypothesis that there is a homoscedasticity because p-value is significant (less than 0.05).

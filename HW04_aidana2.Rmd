@@ -1,0 +1,254 @@
+---
+title: "HomeWork 4, STAT425"
+author: "Aidana Karipbayeva"
+date: "11/2/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+```{r}
+golf <- read.table('lpga2009.csv', header = TRUE, sep = ",")
+```
+
+### Q1. a.
+```{r}
+library(MASS)
+golf_m <- lm(prize ~ percentile, data = golf)
+summary(golf_m)
+quartz.save();par(mfrow=c(2,2));plot(golf_m)
+boxcox(golf_m, lambda=seq(-0.5, 0.5, by=0.1))
+
+golf_m2 <- lm(prize^0.15 ~ percentile, data = golf)
+quartz.save();par(mfrow=c(2,2));plot(golf_m2)
+```
+
+
+
+### Q1. b.
+The assumption of normality of errors are still violated in the new transformed model, because not all the points lie on the line. The errors have constant variance in the tranformed model.
+
+### Q1. c.
+```{r}
+plot(hatvalues(golf_m2))
+which(hatvalues(golf_m2) >= 4/146)
+```
+So, we can see that there are a lot of points with high leverage (greater than 2p/n).
+
+```{r}
+outliers <- which(rstandard(golf_m2) > 2.5)
+plot(rstudent(golf_m2))
+outliers
+
+```
+From rsudentized table, we can see that there are two outliers.
+
+```{r}
+plot(cooks.distance(golf_m2))
+```
+From the plot, we can see that there is no observation with Cook's distance bigger than 1. Thus, we can conclude that there are no influential points.
+
+
+### Q1. d.
+```{r}
+library(faraway)
+golf_m3 = lm(ln.prize. ~ drive + X + fairways + pct_greens + ave_putts + per_sandsaves + ntournaments + regputts + completed_tournaments + percentile + rounds_completed + strokes, data=golf)
+vif(golf_m3)
+
+```
+ As VIF is greater than 5, we can conclude that collinearity is a concern in this model, so we need to reduce the model.
+ 
+### Q1. e.
+```{r}
+aic_b = step(golf_m3, trace=FALSE)
+ 
+```
+With the help of AIC through Backwards Elimination, we end up with the model with independent variables such as drive, fairways, ave_putts, regputts, rounds_completed, strokes.
+
+### Q1. f.
+```{r}
+bic_b = step(golf_m3, k = log(146),trace=FALSE)
+```
+With the help of BIC through Backwards Elimination, we end up with the model with independent variables such as drive, fairways, ave_putts, regputts, rounds_completed, strokes.
+
+### Q1. g.
+```{r}
+golf_int = lm(ln.prize. ~ 1, data=golf)
+golf_m4 = ~drive + X + fairways + pct_greens + ave_putts + per_sandsaves + ntournaments + regputts + completed_tournaments + percentile + rounds_completed + strokes
+aic_f = step(golf_int, direction = "forward", scope = golf_m4, trace=FALSE)
+
+```
+With the help of AIC through Forward Selection, we end up with the model with independent variables such as percentile, rounds_completed, strokes, fairways, drive.
+
+### Q1. h.
+```{r}
+bic_f = step(golf_int, direction = "forward", scope = golf_m4, k = log(146), trace=FALSE)
+```
+With the help of BIC through Forward Selection, we end up with the model with independent variables such as percentile, rounds_completed, strokes, fairways.
+
+
+### Q1. i.
+
+```{r}
+data <- golf
+n.folds <- 10
+SSE.predict <- numeric(n.folds)
+folds <- rep_len(1:n.folds, nrow(data))
+
+for(k in 1:n.folds) {
+     test.index <- which(folds == k)
+     data.train <- data[-test.index,]
+     data.test <- data[test.index,]
+     golf_m5 <- lm(ln.prize. ~ . -X, data=data.train)
+     lm.temp = step(golf_m5, trace=FALSE)
+     SSE.predict[k]<-crossprod(predict(lm.temp,data.test)-data.test$ln.prize.)
+  
+}
+aic_b_sse = sum(SSE.predict)
+aic_b_sse
+```
+
+```{r}
+for(k in 1:n.folds) {
+     test.index <- which(folds == k)
+     data.train <- data[-test.index,]
+     data.test <- data[test.index,]
+     golf_m5 <- lm(ln.prize. ~ . -X, data=data.train)
+     lm.temp = step(golf_m5, k = log(146), trace=FALSE)
+     SSE.predict[k]<-crossprod(predict(lm.temp,data.test)-data.test$ln.prize.)
+  
+}
+bic_b_sse = sum(SSE.predict)
+bic_b_sse
+```
+
+```{r}
+for(k in 1:n.folds) {
+     test.index <- which(folds == k)
+     data.train <- data[-test.index,]
+     data.test <- data[test.index,]
+     golf_int = lm(ln.prize. ~ 1, data=data.train)
+     lm.temp = step(golf_int, direction = "forward", scope = golf_m4, trace=FALSE)
+     SSE.predict[k]<-crossprod(predict(lm.temp,data.test)-data.test$ln.prize.)
+  
+}
+aic_f_sse = sum(SSE.predict)
+aic_f_sse
+```
+
+```{r}
+for(k in 1:n.folds) {
+     test.index <- which(folds == k)
+     data.train <- data[-test.index,]
+     data.test <- data[test.index,]
+     golf_int = lm(ln.prize. ~ 1, data=data.train)
+     lm.temp = step(golf_int, direction = "forward", scope = golf_m4, k = log(146), trace=FALSE)
+     SSE.predict[k]<-crossprod(predict(lm.temp,data.test)-data.test$ln.prize.)
+  
+}
+bic_f_sse = sum(SSE.predict)
+bic_f_sse
+```
+
+```{r}
+print(aic_b_sse)
+print(bic_b_sse)
+print(aic_f_sse)
+print(bic_f_sse)
+```
+So, a model based on AIC using Backwards Elimination gives the lowest cross validation SSE. 
+
+### Q1. j.
+```{r}
+summary(aic_b)$adj.r.squared
+summary(bic_b)$adj.r.squared
+summary(aic_f)$adj.r.squared
+summary(bic_f)$adj.r.squared
+
+```
+The models based on AIC and BIC with backward selection have the highest adjusted $R^2$.
+
+
+### Question 2
+Solution is attached.
+
+## Question 3
+
+```{r}
+reaction <- read.table('reaction.csv', header = TRUE, sep = ",")
+
+```
+
+### Q3. a.
+
+```{r}
+t.test(reaction$regular, reaction$upside.down, alternative="greater", paired=TRUE)
+t = t.test(reaction$regular, reaction$upside.down, alternative="greater", paired=TRUE)$statistic[["t"]]
+
+```
+p-value is equal to 0.6983. So, we fail to reject the null hypothesis that there is no difference in the mean values.
+
+### Q3. b. The number of observations who have better (lower) reaction times in the Upside Down: 15
+```{r}
+d = reaction$regular - reaction$upside.down
+dif1 = length(d[d>0])
+dif1
+
+```
+
+### Q3. c.
+```{r}
+set.seed(1)
+difs <- numeric(1000)
+for (i in 1:1000){
+    dif = sample(reaction$regular) - reaction$upside.down
+    difs[i] <- length(dif[dif>0])
+}
+mean(difs >=dif1)
+
+```
+So, the p-value is less than alpha, that is why we reject the null-hypothesis that there is no significant improvement in the upside down.
+
+
+## Question 4
+
+### Q4. a.
+
+```{r}
+polyd <- read.table('polydata.csv', header = TRUE, sep = ",")
+poly_m1 <- lm(y ~ x + I(x^2) + I(x^3) + I(x^4) + I(x^5), data = polyd)
+summary(poly_m1)
+```
+```{r}
+poly_m2 <- lm(y ~ x + I(x^2) + I(x^3) + I(x^4), data = polyd)
+summary(poly_m2)
+```
+```{r}
+poly_m3 <- lm(y ~ x + I(x^2) + I(x^3), data = polyd)
+summary(poly_m3)
+```
+ What order polynomial best suits this data?  3rd order polynomial best suits this data, as all p-values are less than alpha(5%)
+ 
+ 
+### Q4. b.
+```{r}
+PI = predict(poly_m3, interval = "prediction", level =0.95)
+PI_fit = PI[,1]
+PI_lwr = PI[,2]
+PI_upr = PI[,3]
+plot(polyd$x, polyd$y, main="Scatterplot", xlab="x", ylab="y")
+lines(polyd$x, PI_fit, col = "red")
+lines(polyd$x, PI_lwr, col = "green")
+lines(polyd$x, PI_upr, col = "blue")
+```
+ 
+ 
+ 
+ 
+ 
+ 
